@@ -44,4 +44,5 @@ class VerilogViz(QObject):
 
     def set_verilog_module(self, index, path):
         self.module_models[index].set_verilog_module(path)
+        self.main_form.add_verilog_project_list_item("name")
 

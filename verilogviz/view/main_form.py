@@ -13,6 +13,7 @@ FORMAT = '%(asctime)-15s %(message)s'
 
 VERILOG_EXTENSIONS = ["v"]
 VERILOG_NAME_EXTENSION = [("Verilog (*.v)")]
+PREVIOUS_DIR_KEY = "prev_dir"
 
 
 def is_verilog_file(path):
@@ -21,6 +22,7 @@ def is_verilog_file(path):
     fname, ext = os.path.splitext(path)
     ext = ext.strip(".")
     return ext in VERILOG_EXTENSIONS
+
 
 class MainForm (QMainWindow):
 
@@ -65,16 +67,24 @@ class MainForm (QMainWindow):
         #Custom Views
         self.verilog_graph = VerilogGraph(app, self.actions)
 
+
+        #Project/File Pane
+        project_file_view = QSplitter(Qt.Vertical)
+        self.project_list = QListWidget()
+
         #self.user_path = "."
         self.user_path = os.path.expanduser("~")
-        if self.settings.contains("prev_dir"):
-            self.user_path = self.settings.value("prev_dir", type=str)
+        if self.settings.contains(PREVIOUS_DIR_KEY):
+            self.user_path = self.settings.value(PREVIOUS_DIR_KEY, type=str)
             self.logger.info("Loading previous path: %s" % self.user_path)
 
         self.file_model = QFileSystemModel()
         self.file_model.setRootPath(self.user_path)
         index = self.file_model.index(self.user_path)
-        self.file_model.setNameFilters(VERILOG_EXTENSIONS)
+        vext = []
+        for v in VERILOG_EXTENSIONS:
+            vext.append("*.%s" % v)
+        self.file_model.setNameFilters(vext)
         self.file_model.setNameFilterDisables(False)
         self.file_view = QTreeView()
         self.file_view.setModel(self.file_model)
@@ -84,7 +94,10 @@ class MainForm (QMainWindow):
         self.file_model.directoryLoaded.connect(self.tree_directory_loaded)
 
         self.main_splitter = QSplitter(Qt.Horizontal)
-        self.main_splitter.addWidget(self.file_view)
+        #self.main_splitter.addWidget(self.file_view)
+        project_file_view.addWidget(self.project_list)
+        project_file_view.addWidget(self.file_view)
+        self.main_splitter.addWidget(project_file_view)
         self.main_splitter.addWidget(self.verilog_graph)
 
         self.setCentralWidget(self.main_splitter)
@@ -101,6 +114,19 @@ class MainForm (QMainWindow):
     def demo_action(self):
         self.logger.debug("Demo Action!")
         self.verilog_graph.add_verilog_module("test", {"test_data":"data"})
+
+    def add_verilog_project_list_item(self, project_name):
+        items = self.project_list.findItems(project_name, Qt.MatchRegExp)
+        if len(items) > 0:
+            raise LookupError("Project name in list") 
+        
+        self.project_list.addItem(project_name) 
+
+    def remove_verilog_project_list_item(self, project_name):
+        items = self.project_list.findItems(project_name, Qt.MatchRegExp)
+        if len(items) == 0:
+            raise LookupError("Project not found in list")
+        self.project_list.removeItemWidget(items[0])
 
     def get_graph(self):
         return self.verilog_graph
@@ -124,6 +150,7 @@ class MainForm (QMainWindow):
 
     def closeEvent(self, event):
         self.logger.debug("Close Event")
-        self.settings.setValue("prev_dir", self.user_path)
+        self.settings.setValue(PREVIOUS_DIR_KEY, self.user_path)
+        del(self.settings)
         quit()
 
