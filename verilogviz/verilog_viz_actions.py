@@ -16,5 +16,6 @@ class _Actions(QtCore.QObject):
     #Host Actions
     #Control Signals
     test = QtCore.pyqtSignal(name = "test_signal")
-    set_verilog_module = QtCore.pyqtSignal(int, str, name = "set_verilog_module")
+    add_verilog_module = QtCore.pyqtSignal(int, str, name = "add_verilog_module")
+    configure_include_paths = QtCore.pyqtSignal(name = "configure_include_paths")
 

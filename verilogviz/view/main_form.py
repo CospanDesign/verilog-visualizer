@@ -7,6 +7,9 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
 from graph.verilog_graph import VerilogGraph
+from include_path_dialog import IncludePathDialog
+
+from model.module_list_model import ModuleListModel
 
 
 FORMAT = '%(asctime)-15s %(message)s'
@@ -14,6 +17,8 @@ FORMAT = '%(asctime)-15s %(message)s'
 VERILOG_EXTENSIONS = ["v"]
 VERILOG_NAME_EXTENSION = [("Verilog (*.v)")]
 PREVIOUS_DIR_KEY = "prev_dir"
+INCLUDE_PATH_START_DIR = "include_path_start_dir"
+INCLUDE_PATH_DIRS = "include_paths_dirs"
 
 
 def is_verilog_file(path):
@@ -29,6 +34,12 @@ class MainForm (QMainWindow):
     def __init__(self, app, actions):
         super (MainForm, self).__init__()
         self.settings = QSettings("Cospan Design", "verilog-visualizer")
+        if not self.settings.contains(INCLUDE_PATH_DIRS):
+            self.settings.setValue(INCLUDE_PATH_DIRS, [os.path.currdir])
+
+
+
+        #Configure Settings
         self.actions = actions
         self.logger = logging.getLogger("verilogviz")
         self.setWindowTitle("Verilog Visualizer")
@@ -48,14 +59,19 @@ class MainForm (QMainWindow):
         demo_action = QAction("&Demo", self)
         demo_action.setShortcut('Ctrl+D')
 
+        configure_include_path_action = QAction("Configure &Include Paths", self)
+        configure_include_path_action.setShortcut('Ctrl+I')
+
         save_action.triggered.connect(self.save_clicked)
         open_action.triggered.connect(self.open_clicked)
         demo_action.triggered.connect(self.demo_action)
+        configure_include_path_action.triggered.connect(self.actions.configure_include_paths)
 
         #Toolbar
         self.toolbar = self.addToolBar("main")
         self.toolbar.addAction(exit_action)
         self.toolbar.addAction(demo_action)
+        self.toolbar.addAction(configure_include_path_action)
 
         #Menubar
         menubar = self.menuBar()
@@ -70,7 +86,9 @@ class MainForm (QMainWindow):
 
         #Project/File Pane
         project_file_view = QSplitter(Qt.Vertical)
-        self.project_list = QListWidget()
+        #self.project_list = QListWidget()
+        self.project_list = QListView()
+        self.project_list.setModel(ModuleListModel(self))
 
         #self.user_path = "."
         self.user_path = os.path.expanduser("~")
@@ -115,18 +133,19 @@ class MainForm (QMainWindow):
         self.logger.debug("Demo Action!")
         self.verilog_graph.add_verilog_module("test", {"test_data":"data"})
 
-    def add_verilog_project_list_item(self, project_name):
-        items = self.project_list.findItems(project_name, Qt.MatchRegExp)
-        if len(items) > 0:
+    def add_verilog_project_list_item(self, module):
+        if self.project_list.model().in_list(module["module"]):
             raise LookupError("Project name in list") 
         
-        self.project_list.addItem(project_name) 
+        self.project_list.model().addItem(module) 
 
-    def remove_verilog_project_list_item(self, project_name):
-        items = self.project_list.findItems(project_name, Qt.MatchRegExp)
-        if len(items) == 0:
+    def remove_verilog_project_list_item(self, module_name):
+        if not self.project_list.model().in_list(module_name):
             raise LookupError("Project not found in list")
         self.project_list.removeItemWidget(items[0])
+
+    def get_module(self, module_name):
+        return self.project_list.model().get_module_by_name(module_name)
 
     def get_graph(self):
         return self.verilog_graph
@@ -139,7 +158,7 @@ class MainForm (QMainWindow):
             self.logger.info("Start Path changed to: %s" % self.user_path)
         elif is_verilog_file(str(path)):
             self.logger.info("verilog path: %s" % path)
-            self.actions.set_verilog_module.emit(0, path)
+            self.actions.add_verilog_module.emit(0, path)
 
         for i in range(self.file_model.columnCount()):
             self.file_view.resizeColumnToContents(i)
@@ -153,4 +172,31 @@ class MainForm (QMainWindow):
         self.settings.setValue(PREVIOUS_DIR_KEY, self.user_path)
         del(self.settings)
         quit()
+
+    def configure_include_paths_dialog(self):
+        self.logger.debug("Paths dialog clicked")
+        start_path = os.path.expanduser("~")
+
+        if self.settings.contains(INCLUDE_PATH_START_DIR):
+            start_path = self.settings.value(INCLUDE_PATH_START_DIR, type = str)
+
+        include_paths = self.settings.value(INCLUDE_PATH_DIRS, type = str)
+        self.logger.debug("Loading Paths: %s " % str(include_paths))
+
+        ipd = IncludePathDialog(self)
+        ipd.set_path_list(include_paths)
+        ipd.set_start_path(start_path)
+        result = ipd.exec_()
+        paths = ipd.get_path_list()
+
+        if result:
+            self.logger.debug("Accepted, new paths: %s" % str(ipd.get_path_list()))
+            print "Paths: %s " % str(ipd.get_path_list())
+            self.settings.setValue(INCLUDE_PATH_DIRS, ipd.get_path_list())
+            self.settings.setValue(INCLUDE_PATH_START_DIR, ipd.get_start_path())
+        else:
+            self.logger.debug("Rejected")
+
+    def get_include_paths(self):
+        return self.settings.value(INCLUDE_PATH_DIRS, type = str)
 
