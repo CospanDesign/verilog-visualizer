@@ -72,6 +72,20 @@ def remove_comments(buf="", debug=False):
         pre_comment = ""
         post_comment = ""
 
+    bufx = bufy
+    buf_part = bufx.partition("\(*")
+    pre_comment = ""
+    post_comment = ""
+    bufy = bufx
+    while (len(buf_part[1]) != 0):
+        pre_comment = buf_part[0]
+        post_comment = buf_part[2].partition("*\)")[2]
+        bufy = pre_comment + post_comment
+        buf_part = bufy.partition("(*")
+        pre_comment = ""
+        post_comment = ""
+
+
     if debug:
         print "buf:\n" + bufy
 

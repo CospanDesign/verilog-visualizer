@@ -76,8 +76,19 @@ class GraphicsScene(QGraphicsScene):
         self.links.append(lref)
 
     def clear_links(self):
-        for i in range (len(self.links)):
-            self.removeItem(self.links[i])
+        pass
+        '''
+        #items = list(self.links)
+        for l in self.links:
+            #print "Removing: %s" % str(l)
+            self.removeItem(l)
+
+        self.links = []
+        #while len(self.links) > 0:
+        #    self.removeItem(self.links[items])
+
+        '''
+
 
     def auto_update_all_links(self):
         #print "updating links!"

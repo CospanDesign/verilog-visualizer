@@ -43,6 +43,7 @@ class VerilogViz(QObject):
 
     def add_verilog_module(self, index, path):
         module = find_module(path, self.main_form.get_include_paths())
+        self.main_form.clear_graph()
         self.main_form.add_verilog_project_list_item(module)
         self.main_form.draw_module(module)
 

@@ -121,6 +121,38 @@ def get_module_buffer_tags(buf, bus = "", keywords = [], user_paths = [], projec
         for d in project_tags["defines"]:
             define_dict[d] = project_tags["defines"][d]
 
+    #find all the USER_PARAMETER declarations
+    user_parameters = []
+    substrings = raw_buf.splitlines()
+    for substring in substrings:
+        substring = substring.strip()
+        if "USER_PARAMETER" in substring:
+            name = substring.partition(":")[2].strip()
+            user_parameters.append(name)
+
+
+    param_dict = {}
+    #find all the parameters
+    substrings = buf.splitlines()
+    for substring in substrings:
+        substring = substring.strip()
+        if ("parameter" in substring):
+            if debug:
+                print "found parameter!"
+            substring = substring.partition("parameter")[2].strip()
+            parameter_name = substring.partition("=")[0].strip()
+            parameter_value = substring.partition("=")[2].strip()
+            parameter_value = parameter_value.partition(";")[0].strip()
+            parameter_value = parameter_value.strip(',')
+            if debug:
+                print "parameter name: " + parameter_name
+                print "parameter value: " + parameter_value
+            if parameter_name not in user_parameters:
+                tags["parameters"][parameter_name] = parameter_value
+                param_dict[parameter_name] = parameter_value
+
+
+
     #find all the IO's
     for io in ports:
         end_module = False
@@ -185,13 +217,21 @@ def get_module_buffer_tags(buf, bus = "", keywords = [], user_paths = [], projec
                 substring = substring.partition("]")[2]
                 substring = substring.strip()
                 length_string = length_string.strip()
-                if debug:
-                    print "length string: " + length_string
+                if "wire" in length_string:
+                    length_string = length_string.partition("wire")[2].strip()
+                length_string = length_string.strip()
+
+                #if debug:
+                #print "length string: " + length_string
 
                 ldebug = debug
+                
+                #print "module name: %s" % tags["module"]
+                #print "parameters: %s" % str(param_dict)
 
-                length_string = preprocessor.resolve_defines(length_string, define_dict, debug=ldebug)
+                length_string = preprocessor.resolve_defines(length_string, define_dict, param_dict, debug=ldebug)
                 length_string = preprocessor.evaluate_range(length_string)
+
                 length_string = length_string.partition("]")[0]
                 length_string = length_string.strip("[")
                 if debug:
@@ -207,34 +247,6 @@ def get_module_buffer_tags(buf, bus = "", keywords = [], user_paths = [], projec
                 tags["ports"][io][substring]["size"] = (max_val + 1) - min_val
             else:
                 tags["ports"][io][substring]["size"] = 1
-
-    #find all the USER_PARAMETER declarations
-    user_parameters = []
-    substrings = raw_buf.splitlines()
-    for substring in substrings:
-        substring = substring.strip()
-        if "USER_PARAMETER" in substring:
-            name = substring.partition(":")[2].strip()
-            user_parameters.append(name)
-
-
-    #find all the parameters
-    substrings = buf.splitlines()
-    for substring in substrings:
-        substring = substring.strip()
-        if ("parameter" in substring):
-            if debug:
-                print "found parameter!"
-            substring = substring.partition("parameter")[2].strip()
-            parameter_name = substring.partition("=")[0].strip()
-            parameter_value = substring.partition("=")[2].strip()
-            parameter_value = parameter_value.partition(";")[0].strip()
-            parameter_value = parameter_value.strip(',')
-            if debug:
-                print "parameter name: " + parameter_name
-                print "parameter value: " + parameter_value
-            if parameter_name in user_parameters:
-                tags["parameters"][parameter_name] = parameter_value
 
 
     tags["arbiter_masters"] = arbiter.get_number_of_arbiter_hosts(tags)
@@ -769,14 +781,39 @@ def get_list_of_dependencies(self, filename, debug=False):
     module_token = ""
     done = False
     while (not done):
+        module_token = ""
+        parameter_found = False
+        parameter_flag = False
+        parameter_debt = None
         for i in range (0, len(str_list)):
             line = str_list[i]
             #remove white spaces
             line = line.strip()
+            if "#" in line:
+                line = line.partition("#")[2]
+                parameter_found = True
+
+            if parameter_found:
+                if parameter_debt == 0:
+                    parameter_found = False
+                    parameter_flag = True
+                while ("(" in line) or (")" in line):
+                    if "(" in line:
+                        line = line.partition("(")[2]
+                        if parameter_debt is None:
+                            parameter_debt = 1
+                        else:
+                            parameter_debt += 1
+                    else:
+                        line = line.partition("(")[2]
+                        parameter_debt -= 1
+
             if (line.startswith(".") and line.endswith(",")):
                 #if debug:
                 #  print "found a possible module... with token: " + line
                 module_token = line
+                continue
+            if ";" in line and len(module_token) > 0:
                 break
             #check if we reached the last line
             if (i >= len(str_list) - 1):
@@ -790,20 +827,20 @@ def get_list_of_dependencies(self, filename, debug=False):
 
             #get rid of everything before the possible module
             while (len(module_string.partition(";")[2]) > 0):
-                module_string = module_string.partition(";")[2]
+                module_string = module_string.partition(";")[2].strip()
 
-            module_string = module_string.partition("(")[0]
-            module_string = module_string.strip("#")
-            module_string = module_string.strip()
+            #Now we have a string that contains the module_type and name
+            module_string = module_string.partition("(")[0].strip()
+            m_name = ""
+            if parameter_found:
+                m_name = module_string.partition("#")[0].strip()
+            else:
+                m_name = module_string.partition(" ")[0].strip()
 
-            m_name = module_string.partition(" ")[0]
-            if debug:
-                print "module name: " + m_name
-
-            if (not deps.__contains__(m_name)):
+            if m_name not in deps:
                 if debug:
                     print "adding it to the deps list"
-                deps.append(module_string.partition(" ")[0])
+                deps.append(m_name)
 
     return deps
 

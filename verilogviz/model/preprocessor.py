@@ -134,7 +134,7 @@ def generate_define_table(filestring="", user_paths = [], debug = False):
     return define_dict
 
 
-def resolve_defines(work_string="", define_dict={}, debug = False):
+def resolve_defines(work_string="", define_dict={}, parameter_dict = {}, debug = False):
     """Evauate define
 
     Reads a string expression and returns a string with all expressions evaluated
@@ -193,7 +193,12 @@ def resolve_defines(work_string="", define_dict={}, debug = False):
                     the defined variables declared?" % work_string)
             return ""
 
+    for param in parameter_dict:
+        #print "param: %s" % str(param)
+        if param in work_string:
+            work_string = work_string.replace(param, parameter_dict[param])
 
+    #print "work string: %s" % work_string
     return work_string
 
 def evaluate_define_region(in_string, define_name):

@@ -72,8 +72,8 @@ class Module (object):
         return self.vpos
 
     def generate_dependency_graph(self):
-        self.graph.add_node(self.name())
-        self.graph.node[self.name()] = self
+        self.graph.add_node(id(self))
+        self.graph.node[id(self)] = self
         if self.path is not None:
             self._resolve_dependency_for_module(self.path)
 
@@ -116,15 +116,15 @@ class Module (object):
                 #m = module.get_module_graph().node[n]
                 #self.graph.add_node(n)
                 #self.graph.node[n] = m
-                if n not in self.graph.nodes():
-                    m = module.get_module_graph().node[n]
-                    self.graph.add_node(n)
-                    self.graph.node[n] = m
+                #if n not in self.graph.nodes():
+                m = module.get_module_graph().node[n]
+                self.graph.add_node(id(m))
+                self.graph.node[id(m)] = m
 
 
 
             self.graph.add_edges_from(module.get_module_graph().edges())
-            self.graph.add_edge(self.name(), module.name())
+            self.graph.add_edge(id(self), id(module))
 
         self.logger.debug("Looking for actual modules...")
         module_dict = self.find_modules_within_buffer(buf.partition(")")[2])
@@ -147,52 +147,99 @@ class Module (object):
                 module = Module(module_tags, path = None, user_paths = self.user_paths, instance_name = instance, is_include_file = False, depth = self.depth + 1)
 
             for n in module.get_module_graph().nodes():
-                if n not in self.graph.nodes():
-                    m = module.get_module_graph().node[n]
-                    self.graph.add_node(n)
-                    self.graph.node[n] = m
+                m = module.get_module_graph().node[n]
+                self.graph.add_node(id(m))
+                self.graph.node[id(m)] = m
 
             module.set_vpos(vpos)
             vpos + 1
             #self.graph.add_nodes_from(module.get_module_graph().nodes())
             self.graph.add_edges_from(module.get_module_graph().edges())
-            self.graph.add_edge(self.name(), module.name())
+            self.graph.add_edge(id(self), id(module))
 
     def find_modules_within_buffer(self, buf):
         buf = buf.strip()
+        buf = buf.partition(";")[2]
         done = False
         module_dict = {}
 
         while not done:
             lines = buf.splitlines()
             module_token = ""
+            parameter_found = False
+            parameter_flag = False
+            parameter_debt = None
             for line in lines:
                 line = line.strip()
+                if "#" in line:
+                    if "<=" in line:
+                        continue;
+                    #print "Found #: %s" % line
+                    line = line.partition("#")[2]
+                    parameter_found = True
+
+                if parameter_found:
+                    #print "line: %s" % line
+                    for c in line:
+                        if c == "(":
+                            #print "+1"
+                            if parameter_debt is None:
+                                parameter_debt = 1
+                            else:
+                                parameter_debt += 1
+                        if c == ")":
+                            #print "-1"
+                            parameter_debt -= 1
+
+                        if parameter_debt == 0:
+                            parameter_found = False
+                            parameter_flag = True
+                            break
+
+                    continue
+
+
                 if line.startswith(".") and line.endswith(","):
                     module_token = line
                     break
 
             if len(module_token) == 0:
                 done = True
-                break
-            if done:
-                break
-
-            #Found a possible occurance of a module
-            module_buf = buf.partition(module_token)[0]
-            buf = buf.partition(module_token)[2]
-            buf = buf.partition(";")[2]
-
-            module_buf = module_buf[:module_buf.rfind("(")]
-            module_buf = module_buf.strip()
-            module_buf = module_buf.splitlines()[-1]
-            module_buf = module_buf.strip()
-            if module_buf.startswith("`"):
-                continue
-            module_type = module_buf.partition(" ")[0]
-            module_instance = module_buf.partition(" ")[2]
-            self.logger.debug("Adding: %s to dictionary with instance name: %s" % (module_type, module_instance))
-            module_dict[module_instance] = module_type
+                
+            else:
+                #Found a possible occurance of a module
+                print "MODULE TOKEN: %s" % module_token
+                module_buf = buf.partition(module_token)[0].strip()
+                buf = buf.partition(module_token)[2]
+                buf = buf.partition(";")[2]
+                
+                module_buf = module_buf[:module_buf.rfind("(")].strip()
+                #print "module_buffer: %s" % module_buf
+                if module_buf.startswith("`"):
+                    continue
+                
+                module_type = ""
+                module_instance = ""
+                
+                if parameter_flag:
+                    #print "Parameter type: %s" % str(module_buf) 
+                    module_type = module_buf.partition ("#")[0].strip("() ")
+                    module_instance = module_buf.split()[-1].strip("() ")
+                    #print "parameter type: %s" % module_type
+                    #print "parameter instance: %s" % module_instance
+                else:
+                    module_buf = module_buf.splitlines()[-1]
+                    module_type = module_buf.partition(" ")[0].strip("() ")
+                    module_instance = module_buf.partition(" ")[2].strip("() ")
+                    #print "non parameter type: %s" % module_type
+                    #print "non parameter instance: %s" % module_instance
+                    if len(module_type) > 50:
+                        print "*** module type: %s" % module_type
+                        print "*** module instance: %s" % module_instance
+                
+                
+                self.logger.debug("Adding: %s to dictionary with instance name: %s" % (module_type, module_instance))
+                module_dict[module_instance] = module_type
 
         return module_dict
 

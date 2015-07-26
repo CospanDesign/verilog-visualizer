@@ -136,6 +136,9 @@ class MainForm (QMainWindow):
         self.logger.debug("Demo Action!")
         #self.verilog_graph.add_verilog_module("test", {"test_data":"data"})
 
+    def clear_graph(self):
+        self.verilog_graph.clear()
+
     def draw_module(self, module):
         self.verilog_graph.draw_module(module)
 
