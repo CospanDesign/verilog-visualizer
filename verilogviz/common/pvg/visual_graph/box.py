@@ -42,6 +42,19 @@ DEFAULT_BOX_SIZE = (100, 50)
 
 PADDING = 20
 
+def string_to_side(side_string):
+    if side_string == "right":
+        return st.right
+
+    if side_string == "left":
+        return st.left
+
+    if side_string == "top":
+        return st.top
+
+    if side_string == "bottom":
+        return st.bottom
+
 
 class Box (QGraphicsItem):
     """Generic box used for flow charts"""
@@ -208,8 +221,10 @@ class Box (QGraphicsItem):
 
         painter.restore()
 
-    def add_link(self, to_box, from_side = st.right, to_side=st.left):
+    def add_link(self, to_box, from_side = "right", to_side="left"):
         #print "link"
+        from_side = string_to_side(from_side)
+        to_side = string_to_side(to_side)
         name = "%s_%s" % (self.box_name, to_box.box_name)
         self.links[name] = Link(self, to_box)
         self.links[name].from_box_side(from_side)

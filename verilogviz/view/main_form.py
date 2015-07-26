@@ -7,9 +7,12 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
 from graph.verilog_graph import VerilogGraph
-from include_path_dialog import IncludePathDialog
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
 from model.module_list_model import ModuleListModel
+
+from include_path_dialog import IncludePathDialog
+from matplot_lib_widget import MatplotLibWidget
 
 
 FORMAT = '%(asctime)-15s %(message)s'
@@ -82,7 +85,7 @@ class MainForm (QMainWindow):
 
         #Custom Views
         self.verilog_graph = VerilogGraph(app, self.actions)
-
+        #self.verilog_graph = MatplotLibWidget()
 
         #Project/File Pane
         project_file_view = QSplitter(Qt.Vertical)
@@ -131,10 +134,13 @@ class MainForm (QMainWindow):
 
     def demo_action(self):
         self.logger.debug("Demo Action!")
-        self.verilog_graph.add_verilog_module("test", {"test_data":"data"})
+        #self.verilog_graph.add_verilog_module("test", {"test_data":"data"})
+
+    def draw_module(self, module):
+        self.verilog_graph.draw_module(module)
 
     def add_verilog_project_list_item(self, module):
-        if self.project_list.model().in_list(module["module"]):
+        if self.project_list.model().in_list(module.name()):
             raise LookupError("Project name in list") 
         
         self.project_list.model().addItem(module) 
@@ -194,9 +200,15 @@ class MainForm (QMainWindow):
             print "Paths: %s " % str(ipd.get_path_list())
             self.settings.setValue(INCLUDE_PATH_DIRS, ipd.get_path_list())
             self.settings.setValue(INCLUDE_PATH_START_DIR, ipd.get_start_path())
+            return True
         else:
             self.logger.debug("Rejected")
+            return False
 
     def get_include_paths(self):
         return self.settings.value(INCLUDE_PATH_DIRS, type = str)
+
+    def update_modules_user_paths(self, paths):
+        self.project_list.model().update_modules_user_paths(paths)
+
 

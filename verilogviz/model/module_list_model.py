@@ -17,7 +17,7 @@ class ModuleListModel(QAbstractListModel):
         if role != Qt.DisplayRole:
             return QVariant()
 
-        return QVariant(data["module"])
+        return QVariant(data.name())
 
     def flags(self, index):
         f = super (ModuleListModel, self).flags(index)
@@ -52,15 +52,18 @@ class ModuleListModel(QAbstractListModel):
             raise LookupError("Module: %s is not in list" % name)
 
         for module in self.modules:
-            if str(name).lower() == str(module["module"]).lower():
+            if str(name).lower() == str(module.name()).lower():
                 return module
-            
 
     def get_module_tags(index):
         return self.modules(index)
 
     def in_list(self, name):
         for module in self.modules:
-            if str(name).lower() == str(module["module"]).lower():
+            if str(name).lower() == str(module.name()).lower():
                 return True
         return False
+
+    def update_modules_user_paths(self, paths):
+        for module in self.modules:
+            module.set_user_paths(paths)

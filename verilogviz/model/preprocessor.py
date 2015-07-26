@@ -39,52 +39,6 @@ import string
 import utils
 
 
-def remove_comments(buf="", debug=False):
-    """Remove comments from a buffer.
-
-    Args:
-      buf = Buffer to remove the comments from
-
-    Returns:
-      A buffer with no verilog comments in it
-
-    Raises:
-      Nothing
-    """
-    #first pass remove the '//' comments
-    lines = buf.splitlines()
-    if debug:
-        print "buf:\n" + buf
-    bufx = ""
-    for line in lines:
-        line = line.partition("//")[0]
-        bufx = bufx + line + "\n"
-    if debug:
-        print "bufx:\n" + bufx
-
-    if debug:
-        print "working on /* */ comments\n\n\n"
-    #get rid of /*, */ comments
-    buf_part = bufx.partition("/*")
-    pre_comment = ""
-    post_comment = ""
-    bufy = bufx
-    while (len(buf_part[1]) != 0):
-        pre_comment = buf_part[0]
-        post_comment = buf_part[2].partition("*/")[2]
-        #print "pre_comment: " + pre_comment
-        #print "post comment: " + post_comment
-        bufy = pre_comment + post_comment
-        buf_part = bufy.partition("/*")
-        pre_comment = ""
-        post_comment = ""
-
-    if debug:
-        print "buf:\n" + bufy
-
-    return bufy
-
-
 
 def generate_define_table(filestring="", user_paths = [], debug = False):
     """Reads in a module as a buffer and returns a dictionary of defines
@@ -105,7 +59,7 @@ def generate_define_table(filestring="", user_paths = [], debug = False):
     define_dict = {}
     #from a file string find all the defines and generate an entry into a
     #dictionary
-    filestring = remove_comments(filestring)
+    filestring = utils.remove_comments(filestring)
     str_list = filestring.splitlines()
 
     for item in str_list:

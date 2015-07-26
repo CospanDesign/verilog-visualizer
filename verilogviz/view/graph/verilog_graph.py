@@ -20,6 +20,11 @@ from graphical_defines import MODULE_RECT
 from graphical_defines import MODULE_COLOR
 from graphical_defines import MODULE_POS
 
+import networkx as nx
+
+SCALE_X = 200.0
+SCALE_Y = 100.0
+
 
 class VerilogGraph(GraphicsWidget):
 
@@ -51,7 +56,7 @@ class VerilogGraph(GraphicsWidget):
         size.setWidth(600)
         return size
 
-    def add_verilog_module(self, module_name, module_data):
+    def add_verilog_module(self, module_name, module_data, position):
         mb = ModuleBox( self.scene,
                         MODULE_POS,
                         module_name,
@@ -59,7 +64,18 @@ class VerilogGraph(GraphicsWidget):
                         module_data,
                         MODULE_RECT)
 
-        self.boxes["module_name"] = mb
+        if module_name in self.boxes:
+            cmb = self.boxes[module_name]
+            if not isinstance(cmb, list):
+                cmb = [cmb]
+
+            cmb.append(mb)
+            self.boxes[module_name] = cmb
+            
+        else:
+            self.boxes[module_name] = mb
+
+        mb.setPos(position)
         return mb
 
     def set_verilog_module_position(name, position):
@@ -89,4 +105,58 @@ class VerilogGraph(GraphicsWidget):
     def drop_event(self, event):
         self.logger.debug("Drop Event")
 
+
+    def _tree_layout_creator(self, node_name, tree, graph, depth = 0, position_depth_list = [0], layout = {}):
+
+        layout[node_name] = [depth * SCALE_X, position_depth_list[depth] * SCALE_Y]
+        position_depth_list[depth] += 1
+        successors = tree.successors(node_name)
+        '''
+        for e in tree.edges():
+            if e[0] == node_name:
+                if e[1] not in successors:
+                    successors.append(e[1])
+        '''
+
+        sub_position = 0
+
+        if len(successors) > 0 and len(position_depth_list) <= depth + 1:
+            position_depth_list.append(0)
+
+        for s in successors:
+            self._tree_layout_creator(s, tree, graph, depth + 1, position_depth_list, layout)
+
+        return layout
+        
+
+    def draw_module(self, module):
+        graph = module.get_module_graph()
+        #Find the depth of the modules
+        #layout = nx.layout.fruchterman_reingold_layout(graph, scale = 1000.0)
+        #layout = nx.layout.spring_layout(graph, scale = 1000.0)
+        #import matplotlib.pyplot as plt
+        bfs_tree = nx.bfs_tree(graph, source = module.name())
+        print "BFS Tree: %s" % str(dir(bfs_tree))
+        #print "nodes: %s" % str(bfs_tree.successors(module.name()))
+        print "edges: %s" % str(bfs_tree.edges())
+        layout = self._tree_layout_creator(module.name(), bfs_tree, graph)
+        
+        #nx.draw(layout)
+        #plt.show()
+        print "layout: %s" % str(layout)
+        for n in graph.nodes():
+            module = graph.node[n]
+            p = QPointF(layout[n][0], layout[n][1])
+            self.add_verilog_module(module.name(), module, p)
+
+        for e in graph.edges():
+            print "e: %s" % str(e)
+            print "\t%s %s" % (e[0], e[1])
+            x1 = layout[e[0]][0]
+            x2 = layout[e[1]][0]
+            self.boxes[e[0]].add_link(self.boxes[e[1]], from_side = "right", to_side = "left")
+            #self.boxes[e[0]].add_link(self.boxes[e[1]], from_side = "left", to_side = "right")
+            #if x2 > x1:
+            #else:
+            
 

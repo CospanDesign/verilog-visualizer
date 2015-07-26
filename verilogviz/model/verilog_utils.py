@@ -27,6 +27,8 @@ import json
 import arbiter
 import re
 
+import utils
+from utils import ModuleError
 import preprocessor
 
 def get_eol(total, index):
@@ -83,7 +85,7 @@ def get_module_buffer_tags(buf, bus = "", keywords = [], user_paths = [], projec
 
 
     #remove all the comments from the code
-    buf = preprocessor.remove_comments(buf)
+    buf = utils.remove_comments(buf)
     #print "no comments: \n\n" + buf
 
     for substring in buf.splitlines():
@@ -605,7 +607,7 @@ def has_dependencies(self, filename, debug = False):
             filein = open(filepath)
             fbuf = filein.read()
             filein.close()
-        except ModuleNotFound as err:
+        except ModuleError as err:
             fbuf = ""
         except IOError as err_int:
             if debug:
@@ -618,7 +620,7 @@ def has_dependencies(self, filename, debug = False):
         print "found file!"
 
     #strip out everything we can't use
-    fbuf = preprocessor.remove_comments(fbuf)
+    fbuf = utils.remove_comments(fbuf)
 
     #modules have lines that start with a '.'
     str_list = fbuf.splitlines()
@@ -663,7 +665,7 @@ def resolve_dependencies(filename, debug = True):
         for d in deps:
             try:
                 dep_filename = utils.find_module_filename(d, user_paths, debug = ldebug)
-            except ModuleNotFound as ex:
+            except ModuleError as ex:
                 print "Dependency Warning: %s" % (str(ex))
                 print "Module Name: %s" % (d)
                 print "This warning may be due to:"
@@ -687,9 +689,7 @@ def resolve_dependencies(filename, debug = True):
             if debug:
                 print "found dependency: " + f
             verilog_dependency_list.append(f)
-
     return
-
 
 def get_list_of_dependencies(self, filename, debug=False):
     """get_list_of_dependencies
@@ -739,7 +739,7 @@ def get_list_of_dependencies(self, filename, debug=False):
         print "found file!"
 
     #strip out everything we can't use
-    fbuf = preprocessor.remove_comments(fbuf)
+    fbuf = utils.remove_comments(fbuf)
 
     include_fbuf = fbuf
     #search for `include
@@ -804,7 +804,6 @@ def get_list_of_dependencies(self, filename, debug=False):
                 if debug:
                     print "adding it to the deps list"
                 deps.append(module_string.partition(" ")[0])
-
 
     return deps
 

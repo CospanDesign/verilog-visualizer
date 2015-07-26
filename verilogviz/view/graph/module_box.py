@@ -67,7 +67,9 @@ class ModuleBox(Box):
         md = {}
         md["name"] = module_name
         md["color"] = "color"
-        md["data"] = data
+        md["data"] = data.get_module_tags()
+        md["path"] = data.get_path()
+        md["instance"] = data.name()
         md["move_type"] = "move"
         self.mime_data = json.dumps(md)
         self.setAcceptDrops(False)

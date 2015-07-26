@@ -10,7 +10,7 @@ from PyQt4.QtGui import *
 from view.main_form import MainForm
 
 from verilog_viz_actions import Actions
-from model.verilog_utils import *
+from model.module import find_module
 
 class VerilogViz(QObject):
 
@@ -42,12 +42,13 @@ class VerilogViz(QObject):
         self.focused_module = None
 
     def add_verilog_module(self, index, path):
-        module_tags = get_module_tags(path, user_paths = self.main_form.get_include_paths())
-        module_tags["path"] = path
-        self.main_form.add_verilog_project_list_item(module_tags)
+        module = find_module(path, self.main_form.get_include_paths())
+        self.main_form.add_verilog_project_list_item(module)
+        self.main_form.draw_module(module)
 
     def include_paths_dialog(self):
-        self.main_form.configure_include_paths_dialog()
+        if self.main_form.configure_include_paths_dialog():
+            self.main_form.update_modules_user_paths(self.main_form.get_include_paths())
 
     def set_focused_module(self, module_name):
         self.focused_module = self.main_form.get_module(module_name)
