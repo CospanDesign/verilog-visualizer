@@ -38,7 +38,7 @@ class MainForm (QMainWindow):
         super (MainForm, self).__init__()
         self.settings = QSettings("Cospan Design", "verilog-visualizer")
         if not self.settings.contains(INCLUDE_PATH_DIRS):
-            self.settings.setValue(INCLUDE_PATH_DIRS, [os.path.currdir])
+            self.settings.setValue(INCLUDE_PATH_DIRS, [os.curdir])
 
 
 

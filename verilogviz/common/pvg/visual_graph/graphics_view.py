@@ -140,5 +140,6 @@ class GraphicsView(QGraphicsView):
         #print "resize event"
         if self.s is not None:
             self.s.auto_update_all_links()
-            self.fit_in_view()
+            #self.fit_in_view()
+            #print "fit in view"
 

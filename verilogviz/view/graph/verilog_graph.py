@@ -36,18 +36,19 @@ class VerilogGraph(GraphicsWidget):
         super (VerilogGraph, self).__init__(self.view, self.scene)
         self.boxes = {}
         self.app = app
+        self.vpos = 0
 
     def fit_in_view(self):
         self.view.fit_in_view()
         self.logger.debug("fit in view")
 
     def clear(self):
+        self.scene.clear_links()
         self.scene.clear()
         self.boxes = {}
-        self.scene.clear_links()
 
     def update(self):
-        super (FPGABusView, self).update()
+        super (VerilogGraph, self).update()
         self.scene.auto_update_all_links()
         self.view._scale_fit()
 
@@ -99,6 +100,7 @@ class VerilogGraph(GraphicsWidget):
 
     def _tree_layout_creator(self, node_id, tree, graph, depth = 0, position_depth_list = [0], layout = {}, vpos = 0):
 
+        self.vpos = vpos
         #layout[node_id] = [depth * SCALE_X, position_depth_list[depth] * SCALE_Y]
         layout[node_id] = [depth * SCALE_X, vpos * SCALE_Y]
         position_depth_list[depth] += 1
@@ -117,8 +119,9 @@ class VerilogGraph(GraphicsWidget):
 
         for s in successors:
             #print "successor :%d"  % s
-            self._tree_layout_creator(s, tree, graph, depth + 1, position_depth_list, layout, vpos)
-            vpos += 1
+            self._tree_layout_creator(s, tree, graph, depth + 1, position_depth_list, layout, self.vpos)
+            if successors.index(s) > 0:
+                self.vpos += 1
 
         return layout
         
