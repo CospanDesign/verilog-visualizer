@@ -1,4 +1,5 @@
 *.py[cod]
+.idea
 
 clean_nysa.py
 
